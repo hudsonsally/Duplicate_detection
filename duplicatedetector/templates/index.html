@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Video Duplicate Detector</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Video Duplicate Detector</h1>
+
+        <!-- Scan Folder Button -->
+        <form method="post">
+            <button type="submit">Scan Folder</button>
+        </form>
+
+        {% if videos %}
+            <h2>Videos</h2>
+            <div>
+                {% for video in videos %}
+                    <div class="video-box">
+                        <h3>{{ video }}</h3>
+                        <a href="{{ url_for('play_video', filename=video) }}">
+                            <img src="{{ url_for('static', filename=video+'.jpg') }}" width="200">
+                        </a>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <h2 class="duplicates">Duplicate Videos</h2>
+            {% if duplicates %}
+                <ul>
+                    {% for file, original in duplicates %}
+                    <li class="duplicates">{{ file }} is a duplicate of {{ original }}</li>
+                    {% endfor %}
+                </ul>
+
+                <!-- Delete Button -->
+                <form action="{{ url_for('delete_duplicates') }}" method="post">
+                    <button type="submit" style="background-color: red;">Delete Duplicates</button>
+                </form>
+            {% endif %}
+        {% endif %}
+    </div>
+</body>
+</html>
