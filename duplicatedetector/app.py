@@ -2,9 +2,16 @@ from flask import Flask, render_template, request, send_file, redirect, url_for
 import os
 import hashlib
 import cv2
+import shutil
 
 app = Flask(__name__)
-FOLDER_PATH = r"C:\Users\91824\OneDrive\Desktop\videos"
+FOLDER_PATH = r"C:\Users\91824\Downloads\duplicatedetector\videos"
+MOVED_FOLDER = r"C:\Users\91824\Downloads\duplicatedetector\moved duplicates"
+
+# Create necessary directories
+os.makedirs(FOLDER_PATH, exist_ok=True)
+os.makedirs(MOVED_FOLDER, exist_ok=True)
+os.makedirs("static", exist_ok=True)
 
 def get_file_hash(file_path):
     """Generate SHA256 hash for a file."""
@@ -19,6 +26,9 @@ def find_duplicate_videos(folder_path):
     hashes = {}
     duplicates = []
     all_videos = []
+
+    if not os.path.exists(folder_path):
+        return [], []
 
     for file_name in os.listdir(folder_path):
         file_path = os.path.join(folder_path, file_name)
@@ -37,46 +47,59 @@ def find_duplicate_videos(folder_path):
 def generate_thumbnail(video_path, thumbnail_path):
     """Extract the first frame of a video for thumbnail."""
     cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        print(f"Cannot open {video_path}")
+        return None
     ret, frame = cap.read()
     if ret:
-        cv2.imwrite(os.path.join("static", os.path.basename(thumbnail_path)), frame)
+        cv2.imwrite(thumbnail_path, frame)
+        return thumbnail_path
     else:
         print(f"Error generating thumbnail for {video_path}")
+        return None
     cap.release()
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    videos = []
-    duplicates = []
-    thumbnails = {}
+    videos, duplicates, thumbnails = [], [], {}
+    folder_path = FOLDER_PATH  # default
 
     if request.method == 'POST':
-        videos, duplicates = find_duplicate_videos(FOLDER_PATH)
+        # Use user-provided folder if available
+        folder_path = request.form.get('folder') or FOLDER_PATH
 
-        # Generate thumbnails
+        if not os.path.exists(folder_path):
+            return render_template('index.html', error="Folder not found", videos=[], thumbnails={}, duplicates=[])
+
+        videos, duplicates = find_duplicate_videos(folder_path)
         for video in videos:
-            video_path = os.path.join(FOLDER_PATH, video)
-            thumbnail_path = f"static/{video}.jpg"
-            generate_thumbnail(video_path, thumbnail_path)
-            thumbnails[video] = thumbnail_path
+            video_path = os.path.join(folder_path, video)
+            thumbnail_path = os.path.join("static", f"{video}.jpg")
+            thumb = generate_thumbnail(video_path, thumbnail_path)
+            thumbnails[video] = thumb
 
     return render_template('index.html', videos=videos, thumbnails=thumbnails, duplicates=duplicates)
 
 @app.route('/delete_duplicates', methods=['POST'])
 def delete_duplicates():
-    """Delete duplicate video files from the folder."""
+    """Move duplicate video files to the 'moved duplicates' folder."""
     _, duplicates = find_duplicate_videos(FOLDER_PATH)
     
     for file_name, _ in duplicates:
         file_path = os.path.join(FOLDER_PATH, file_name)
-        os.remove(file_path)  # Delete the file
+        if os.path.exists(file_path):
+            moved_path = os.path.join(MOVED_FOLDER, file_name)
+            shutil.move(file_path, moved_path)
 
-    return redirect(url_for('index'))  # Refresh the page after deletion
+    return redirect(url_for('index'))
 
 @app.route('/video/<filename>')
 def play_video(filename):
     """Serve video files for playback."""
-    return send_file(os.path.join(FOLDER_PATH, filename))
+    video_path = os.path.join(FOLDER_PATH, filename)
+    if os.path.exists(video_path):
+        return send_file(video_path)
+    return "Video not found", 404
 
 if __name__ == '__main__':
     app.run(debug=True)

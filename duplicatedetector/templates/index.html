@@ -8,10 +8,16 @@
     <div class="container">
         <h1>Video Duplicate Detector</h1>
 
-        <!-- Scan Folder Button -->
+        <!-- Folder Path Input -->
         <form method="post">
+            <label for="folder">Enter folder path:</label>
+            <input type="text" id="folder" name="folder" placeholder="C:\Users\91824\Videos">
             <button type="submit">Scan Folder</button>
         </form>
+
+        {% if error %}
+            <p style="color:red;">{{ error }}</p>
+        {% endif %}
 
         {% if videos %}
             <h2>Videos</h2>
@@ -20,7 +26,11 @@
                     <div class="video-box">
                         <h3>{{ video }}</h3>
                         <a href="{{ url_for('play_video', filename=video) }}">
-                            <img src="{{ url_for('static', filename=video+'.jpg') }}" width="200">
+                            {% if thumbnails[video] %}
+                                <img src="{{ thumbnails[video] }}" width="200">
+                            {% else %}
+                                <p>No thumbnail available</p>
+                            {% endif %}
                         </a>
                     </div>
                 {% endfor %}
@@ -30,15 +40,19 @@
             {% if duplicates %}
                 <ul>
                     {% for file, original in duplicates %}
-                    <li class="duplicates">{{ file }} is a duplicate of {{ original }}</li>
+                        <li class="duplicates">{{ file }} is a duplicate of {{ original }}</li>
                     {% endfor %}
                 </ul>
 
-                <!-- Delete Button -->
+                <!-- Move Duplicates Button -->
                 <form action="{{ url_for('delete_duplicates') }}" method="post">
-                    <button type="submit" style="background-color: red;">Delete Duplicates</button>
+                    <button type="submit" class="move-btn">Move Duplicates to Folder</button>
                 </form>
+            {% else %}
+                <p>No duplicates found.</p>
             {% endif %}
+        {% else %}
+            <p>No videos found. Please scan a folder.</p>
         {% endif %}
     </div>
 </body>

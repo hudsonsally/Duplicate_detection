@@ -24,6 +24,14 @@ button:hover {
     background-color: #0056b3;
 }
 
+.move-btn {
+    background-color: #ff6b6b;
+}
+
+.move-btn:hover {
+    background-color: #d63031;
+}
+
 .container {
     max-width: 800px;
     margin: auto;
